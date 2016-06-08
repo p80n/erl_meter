@@ -14,10 +14,11 @@ config :erl_meter,
   protocol: "http",
   host: "localhost",
   port: "3000",
-  organizations: 2,
-  infrastructures: 4,
-  machines: 10,
-  samples: 50
+  organizations: 1,
+  infrastructures: 1,
+  machines: 1000,
+  samples: 50,
+  threaded: true
 
 #
 # And access this configuration in your application as:
