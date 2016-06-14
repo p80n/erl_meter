@@ -5,7 +5,7 @@ end
 
 
 defmodule ErlMeter.Sample do
-  @derive [Poison.Encoder]
+  @derive {Poison.Encoder, except: [:id]}
   defstruct [:machine_id, :id,
              :start_time, :end_time,
              machine: MachineSample,

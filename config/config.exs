@@ -15,9 +15,9 @@ config :erl_meter,
   host: "localhost",
   port: "3000",
   organizations: 1,
-  infrastructures: 1,
-  machines: 1000,
-  samples: 50,
+  infrastructures: 2,  # per organization
+  machines: 10,        # per infrastructure
+  samples: 500,        # total samples
   threaded: true
 
 #

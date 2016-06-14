@@ -21,12 +21,26 @@ defmodule ErlMeter do
     machines = provision(threaded: threaded)
     sample_start = Time.now
     post_samples(machines: machines, threaded: threaded)
+    run_end = Time.now
 
-    IO.puts "\nProvisioning took #{Time.diff(sampple_start, run_start, :seconds)} seconds"
-    IO.puts "Sample submission took #{Time.diff(Time.now, sample_start, :seconds)} seconds"
-    IO.puts "Total time: #{Time.diff(Time.now, run_start, :seconds)} seconds"
+    IO.puts "\nProvisioning took #{Time.diff(sample_start, run_start, :seconds)} seconds"
+    IO.puts "Sample submission took #{Time.diff(run_end, sample_start, :seconds)} seconds"
+    IO.puts "Total time: #{Time.diff(run_end, run_start, :seconds)} seconds"
+    IO.puts "Request rate: #{request_rate(run_start, run_end)} requests/second"
   end
 
+  def request_rate(start_time, end_time) do
+    org_count = Application.get_env(:erl_meter, :organizations)
+    inf_count = Application.get_env(:erl_meter, :infrastructures)
+    machine_count = Application.get_env(:erl_meter, :machines)
+    sample_count = Application.get_env(:erl_meter, :samples)
+
+    requests = org_count * inf_count * machine_count + sample_count
+    total_time = Time.diff(end_time, start_time, :seconds)
+
+    Float.round(requests / total_time, 3)
+
+  end
 
   def organization_structs(count) do
     for n <- 0..count-1, do: %Organization{name: "org#{n+1}", primary_contact: "contact#{n+1}"}
@@ -78,24 +92,24 @@ defmodule ErlMeter do
     inf_count = Application.get_env(:erl_meter, :infrastructures)
     machine_count = Application.get_env(:erl_meter, :machines)
 
-    machines = organization_structs(org_count)
+    organization_structs(org_count)
     |> Enum.map(fn org -> async_post("organizations", org) end)
     |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
-    |> Enum.map(fn {task, res} -> res || Task.shutdown(task, :brutal_kill) end)
+    |> Enum.map(fn {_, res} -> res || nil end)
     |> Enum.map(fn body -> Poison.decode(body, as: %Organization{}) end)
     |> Enum.map(fn response_tuple -> elem(response_tuple, 1) end)
     |> Enum.map(fn org -> infrastructure_structs(inf_count, org) end)
     |> List.flatten
     |> Enum.map(fn inf -> async_post("organizations/#{inf.organization_id}/infrastructures", inf) end)
     |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
-    |> Enum.map(fn {task, res} -> res || Task.shutdown(task, :brutal_kill) end)
+    |> Enum.map(fn {_, res} -> res || nil end)
     |> Enum.map(fn body -> Poison.decode(body, as: %Infrastructure{}) end)
     |> Enum.map(fn tuple -> elem(tuple, 1) end)
     |> Enum.map(fn inf -> machine_structs(machine_count, inf) end)
     |> List.flatten
     |> Enum.map(fn machine -> async_post("infrastructures/#{machine.infrastructure_id}/machines", machine) end)
     |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
-    |> Enum.map(fn {task, res} -> res || Task.shutdown(task, :brutal_kill) end)
+    |> Enum.map(fn {_, res} -> res || nil end)
     |> Enum.map(fn body -> Poison.decode(body, as: %Machine{}) end)
     |> Enum.map(fn tuple -> elem(tuple, 1) end)
   end
