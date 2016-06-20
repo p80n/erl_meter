@@ -2,7 +2,7 @@ defmodule ErlMeter.PostHelper do
 
   import List
 
-  def api_base(:couch), do: "http://localhost:5985/dev_inventory"
+  def api_base(:couch), do: "http://#{Application.get_env(:erl_meter, :host)}:5984/dev_inventory"
   def api_base(:api),   do: "#{Application.get_env(:erl_meter, :protocol)}://#{Application.get_env(:erl_meter, :host)}:#{Application.get_env(:erl_meter, :port)}/api/v1"
 
 
