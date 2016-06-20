@@ -35,10 +35,13 @@ defmodule ErlMeter do
     machine_count = Application.get_env(:erl_meter, :machines)
     sample_count = Application.get_env(:erl_meter, :samples)
 
-    requests = org_count * inf_count * machine_count + sample_count
+    requests = org_count + (org_count * inf_count) + (org_count * inf_count * machine_count) + sample_count
     total_time = Time.diff(end_time, start_time, :seconds)
 
-    Float.round(requests / total_time, 3)
+    case total_time do
+      0 -> requests
+      _ -> Float.round(requests / total_time, 3)
+    end
 
   end
 

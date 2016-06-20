@@ -13,12 +13,13 @@ use Mix.Config
 config :erl_meter,
   protocol: "http",
   host: "localhost",
-  port: "3000",
+  port: "5985",
   organizations: 1,
-  infrastructures: 2,  # per organization
-  machines: 10,        # per infrastructure
-  samples: 500,        # total samples
-  threaded: true
+  infrastructures: 1,  # per organization
+  machines: 50,        # per infrastructure
+  samples: 100,        # total samples
+  threaded: false,
+  destination: :couch
 
 #
 # And access this configuration in your application as:
