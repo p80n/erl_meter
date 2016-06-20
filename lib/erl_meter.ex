@@ -21,12 +21,14 @@ defmodule ErlMeter do
     machines = provision(threaded: threaded)
     sample_start = Time.now
     post_samples(machines: machines, threaded: threaded)
+    [first_machine | _] = machines
     run_end = Time.now
 
     IO.puts "\nProvisioning took #{Time.diff(sample_start, run_start, :seconds)} seconds"
     IO.puts "Sample submission took #{Time.diff(run_end, sample_start, :seconds)} seconds"
     IO.puts "Total time: #{Time.diff(run_end, run_start, :seconds)} seconds"
     IO.puts "Request rate: #{request_rate(run_start, run_end)} requests/second"
+    IO.puts "Sample machine ID: #{first_machine.id}"
   end
 
   def request_rate(start_time, end_time) do
@@ -122,7 +124,7 @@ defmodule ErlMeter do
 
     Stream.cycle(machines)
     |> Stream.take(sample_count)
-    |> Enum.map(fn machine -> async_post("machines/#{machine.id}/samples", sample(machine) ) end)
+    |> Enum.map(fn machine -> async_post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end)
     |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
   end
   def post_samples(machines: machines, threaded: false) do
@@ -130,7 +132,7 @@ defmodule ErlMeter do
 
     Stream.cycle(machines)
     |> Stream.take(sample_count)
-    |> Enum.map(fn machine -> post("machines/#{machine.id}/samples", sample(machine) ) end)
+    |> Enum.map(fn machine -> post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end)
   end
 
   def start(_type, args) do

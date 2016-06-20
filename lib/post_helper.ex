@@ -2,30 +2,31 @@ defmodule ErlMeter.PostHelper do
 
   import List
 
-  def api_base(:couch), do: "http://#{Application.get_env(:erl_meter, :host)}:5984/dev_inventory"
-  def api_base(:api),   do: "#{Application.get_env(:erl_meter, :protocol)}://#{Application.get_env(:erl_meter, :host)}:#{Application.get_env(:erl_meter, :port)}/api/v1"
+  def api_base(:couch), do: "http://#{Application.get_env(:erl_meter, :host)}:5984"
+  def api_base(:api),   do: "#{Application.get_env(:erl_meter, :protocol)}://#{Application.get_env(:erl_meter, :host)}:#{Application.get_env(:erl_meter, :port)}"
 
 
-  def post(endpoint, struct) do
+  def post(endpoint, struct, database \\ "dev_inventory") do
     IO.write String.upcase(String.at(List.last(String.split(endpoint, "/")), 0))
     case Application.get_env(:erl_meter, :destination) do
-      :api ->   base_post(endpoint, struct)
-      :couch -> base_post(nil, struct)
+      :api ->   base_post(endpoint, struct, "api/v1")
+      :couch -> base_post(nil, struct, database)
     end
   end
 
-  def async_post(endpoint, struct) do
+  def async_post(endpoint, struct, database \\ "dev_inventory") do
     IO.write String.upcase(String.at(List.last(String.split(endpoint, "/")), 0))
     case Application.get_env(:erl_meter, :destination) do
-      :api ->   Task.async( fn -> base_post(endpoint, struct) end )
-      :couch -> Task.async( fn -> base_post(nil, struct) end )
+      :api ->   Task.async( fn -> base_post(endpoint, struct, "ap1/v1") end )
+      :couch -> Task.async( fn -> base_post(nil, struct, database) end )
     end
   end
 
-  def base_post(endpoint, struct) do
-    url = "#{api_base(Application.get_env(:erl_meter, :destination))}/#{endpoint}"
+  def base_post(endpoint, struct, root) do
+    url = "#{api_base(Application.get_env(:erl_meter, :destination))}/#{root}/#{endpoint}"
 
     {:ok, body} = Poison.encode(struct)
+
     headers = [{"Accept", "application/json"}, {"Content-Type", "application/json"}]
     options = [{:timeout, :infinity}, {:recv_timeout, :infinity}]
      case HTTPoison.post(url, body, headers, options) do

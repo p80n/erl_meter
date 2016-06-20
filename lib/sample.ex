@@ -9,6 +9,8 @@ defmodule ErlMeter.Sample do
   defstruct [:machine_id, :id,
              :start_time, :end_time,
              machine: MachineSample,
+             type: "Sample"
             ]
+
 
 end
