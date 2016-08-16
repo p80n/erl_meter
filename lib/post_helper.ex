@@ -2,11 +2,11 @@ defmodule ErlMeter.PostHelper do
 
   import List
 
-  def api_base(:couch), do: "http://#{Application.get_env(:erl_meter, :host)}:5984"
+  def api_base(:couch), do: "http://#{Application.get_env(:erl_meter, :host)}:#{Application.get_env(:erl_meter, :port)}"
   def api_base(:api),   do: "#{Application.get_env(:erl_meter, :protocol)}://#{Application.get_env(:erl_meter, :host)}:#{Application.get_env(:erl_meter, :port)}"
 
 
-  def post(endpoint, struct, database \\ "dev_inventory") do
+  def post(endpoint, struct, database \\ "staging_inventory") do
     IO.write String.upcase(String.at(List.last(String.split(endpoint, "/")), 0))
     case Application.get_env(:erl_meter, :destination) do
       :api ->   base_post(endpoint, struct, "api/v1")
@@ -14,10 +14,10 @@ defmodule ErlMeter.PostHelper do
     end
   end
 
-  def async_post(endpoint, struct, database \\ "dev_inventory") do
+  def async_post(endpoint, struct, database \\ "staging_inventory") do
     IO.write String.upcase(String.at(List.last(String.split(endpoint, "/")), 0))
     case Application.get_env(:erl_meter, :destination) do
-      :api ->   Task.async( fn -> base_post(endpoint, struct, "ap1/v1") end )
+      :api ->   Task.async( fn -> base_post(endpoint, struct, "api/v1") end )
       :couch -> Task.async( fn -> base_post(nil, struct, database) end )
     end
   end
@@ -28,7 +28,8 @@ defmodule ErlMeter.PostHelper do
     {:ok, body} = Poison.encode(struct)
 
     headers = [{"Accept", "application/json"}, {"Content-Type", "application/json"}]
-    options = [{:timeout, :infinity}, {:recv_timeout, :infinity}]
+#    options = [{:timeout, :infinity}, {:recv_timeout, :infinity},
+    options = [ hackney: [ basic_auth: {"admin", "wacit"} ] ]
      case HTTPoison.post(url, body, headers, options) do
        {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         body

@@ -1,5 +1,6 @@
 defmodule ErlMeter do
   use Application
+  use Supervisor
   use Timex
 
   import ErlMeter.PostHelper
@@ -21,14 +22,12 @@ defmodule ErlMeter do
     machines = provision(threaded: threaded)
     sample_start = Time.now
     post_samples(machines: machines, threaded: threaded)
-    [first_machine | _] = machines
     run_end = Time.now
 
     IO.puts "\nProvisioning took #{Time.diff(sample_start, run_start, :seconds)} seconds"
     IO.puts "Sample submission took #{Time.diff(run_end, sample_start, :seconds)} seconds"
     IO.puts "Total time: #{Time.diff(run_end, run_start, :seconds)} seconds"
     IO.puts "Request rate: #{request_rate(run_start, run_end)} requests/second"
-    IO.puts "Sample machine ID: #{first_machine.id}"
   end
 
   def request_rate(start_time, end_time) do
@@ -119,23 +118,65 @@ defmodule ErlMeter do
     |> Enum.map(fn tuple -> elem(tuple, 1) end)
   end
 
-  def post_samples(machines: machines, threaded: true) do
-    sample_count = Application.get_env(:erl_meter, :samples)
-
-    Stream.cycle(machines)
-    |> Stream.take(sample_count)
-    |> Enum.map(fn machine -> async_post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end)
-    |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
-  end
   def post_samples(machines: machines, threaded: false) do
     sample_count = Application.get_env(:erl_meter, :samples)
 
     Stream.cycle(machines)
     |> Stream.take(sample_count)
-    |> Enum.map(fn machine -> post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end)
+    |> Enum.map(fn machine -> post("machines/#{machine.id}/samples", sample(machine), "staging_samples" ) end)
+  end
+
+  def post_samples(machines: machines, threaded: true) do
+    sample_count = Application.get_env(:erl_meter, :samples)
+
+    Stream.cycle(machines)
+    |> Stream.take(sample_count)
+#    |> Enum.map(fn machine -> [machine: machine, sample: sample(machine)] end )
+    |> Enum.map(fn machine -> async_post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end)
+    |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
+#    |> Enum.map(fn tuples ->
+#|> Enum.map(fn tuples -> spawn( fn() -> pool_post(tuples) end ) end )
+
+    # orig
+  end
+
+  defp pool_name() do
+    :example_pool
+  end
+
+  defp pool_post(tuple) do
+    IO.puts "pool post"
+    :poolboy.transaction(
+      pool_name(),
+      fn(worker) -> :gen_server.call(worker,tuple) end
+    )
+  end
+
+#iex(1)> :poolboy.transaction(:hello_pool, fn(worker)-> :gen_server.call(worker, :greet) end)
+
+
+
+  def init({}) do
+
+    poolboy_config = [
+      name: {:local, pool_name()},
+      worker_module: ErlMeter.Worker,
+      size: 2,
+      max_overflow: 100  ]
+
+    children = [ :poolboy.child_spec(pool_name(), poolboy_config, []) ]
+
+    options = [
+      strategy: :one_for_one,
+      name: ErlMeter.Supervisor ]
+
+    Supervisor.start_link(children, options)
+
   end
 
   def start(_type, args) do
+    ErlMeter.Supervisor.start_link
+
     main(args)
   end
 
