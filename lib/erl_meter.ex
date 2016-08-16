@@ -62,8 +62,14 @@ defmodule ErlMeter do
 
   def sample(machine) do
     machine_stats = %MachineSample{ cpu_usage_percent: 50,
-                                    memory_bytes: 2.0e+9 }
+                                    memory_bytes: 2.0e+9,
+                                    lan_io: 1.0e+9,
+                                    wan_io: 1.0e5,
+                                    storage: 10.0e+12,
+                                    consumption: 100.00 }
     %Sample{ machine_id: machine.id,
+             org_id: machine.infrastructure_id,
+             inf_id: machine.infrastructure_id,
              start_time: "2016-06-01T10:00:00Z",
              end_time: "2016-06-01T10:05:00Z",
              machine: machine_stats
