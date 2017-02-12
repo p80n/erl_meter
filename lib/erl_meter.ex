@@ -22,6 +22,12 @@ defmodule ErlMeter do
     if System.get_env("MACHINES") do
       Application.put_env(:erl_meter, :machines, String.to_integer(System.get_env("MACHINES")))
     end
+    if System.get_env("INFRASTRUCTURES") do
+      Application.put_env(:erl_meter, :infrastructures, String.to_integer(System.get_env("INFRASTRUCTURES")))
+    end
+    if System.get_env("ORGANIZATIONS") do
+      Application.put_env(:erl_meter, :organizations, String.to_integer(System.get_env("ORGANIZATIONS")))
+    end
     if System.get_env("TOKEN") do
       Application.put_env(:erl_meter, :token, System.get_env("TOKEN"))
       IO.puts "Using OAuth token: #{Application.get_env(:erl_meter, :token)}"
