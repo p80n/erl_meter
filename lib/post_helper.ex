@@ -34,13 +34,13 @@ defmodule ErlMeter.PostHelper do
     Map.put(struct, :id,  body_struct["id"])
   end
 
-  def async_post(endpoint, struct, database \\ "dev_inventory") do
-    IO.write String.upcase(String.at(List.last(String.split(endpoint, "/")), 0))
-    case Application.get_env(:erl_meter, :destination) do
-      :api ->   Task.async( fn -> base_post(endpoint, struct, "api/v1") end )
-      :couch -> Task.async( fn -> base_post(nil, struct, database) end )
-    end
-  end
+  # def async_post(endpoint, struct, database \\ "dev_inventory") do
+  #   IO.write String.upcase(String.at(List.last(String.split(endpoint, "/")), 0))
+  #   case Application.get_env(:erl_meter, :destination) do
+  #     :api ->   Task.async( fn -> base_post(endpoint, struct, "api/v1") end )
+  #     :couch -> Task.async( fn -> base_post(nil, struct, database) end )
+  #   end
+  # end
 
   def base_post(endpoint, struct, root) do
     url = "#{api_base(Application.get_env(:erl_meter, :destination))}/#{root}/#{endpoint}"

@@ -16,7 +16,7 @@ defmodule ErlMeter.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :httpoison, :timex, :poolboy]]
+    [applications: [:logger, :httpoison, :timex]]
   end
 
   # Dependencies can be Hex packages:
@@ -32,8 +32,8 @@ defmodule ErlMeter.Mixfile do
     [ {:httpoison, "~> 0.8.0"},
       {:poison, "~> 2.0"},
       {:tzdata, "== 0.1.8", override: true},
-      {:timex, "~> 2.0"},
-      {:poolboy, "~> 1.5"}
+      {:timex, "~> 3.1"},
+      {:parallel, github: "eproxus/parallel" }
     ]
   end
 

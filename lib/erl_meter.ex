@@ -26,8 +26,14 @@ defmodule ErlMeter do
       Application.put_env(:erl_meter, :token, System.get_env("TOKEN"))
       IO.puts "Using OAuth token: #{Application.get_env(:erl_meter, :token)}"
     end
-
-    IO.puts "Starting posts to #{Application.get_env(:erl_meter, :host)}..."
+    if System.get_env("THREADED") do
+      case System.get_env("THREADED") do
+        "0"     -> Application.put_env(:erl_meter, :threaded, false)
+        "false" -> Application.put_env(:erl_meter, :threaded, false)
+        "FALSE" -> Application.put_env(:erl_meter, :threaded, false)
+        # _ -> true is already the default
+      end
+    end
 
     Application.load(:tzdata)
     :ok = Application.ensure_started(:tzdata)
@@ -35,7 +41,9 @@ defmodule ErlMeter do
     destination = Application.get_env(:erl_meter, :destination)
 
     run_start = Duration.now
+    IO.puts "Starting posts to #{Application.get_env(:erl_meter, :host)}..."
     machines = provision(threaded: threaded)
+
     sample_start = Duration.now
     post_samples(machines: machines, threaded: threaded, destination: destination)
     run_end = Duration.now
@@ -120,20 +128,12 @@ defmodule ErlMeter do
 
     organization_structs(org_count)
     |> Enum.map(fn org -> post("organizations", org) end)
-    # |> Enum.map(fn body -> Poison.decode(body, as: %Organization{}) end)
-    # |> Enum.map(fn response_tuple -> elem(response_tuple, 1) end)
     |> Enum.map(fn org -> infrastructure_structs(inf_count, org) end)
     |> List.flatten
     |> Enum.map(fn inf -> post("organizations/#{inf.organization_id}/infrastructures", inf) end)
-    # |> Enum.map(fn body -> Poison.decode(body, as: %Infrastructure{}) end)
-    # |> Enum.map(fn tuple -> elem(tuple, 1) end)
     |> Enum.map(fn inf -> machine_structs(machine_count, inf) end)
     |> List.flatten
     |> Enum.map(fn machine -> post("infrastructures/#{machine.infrastructure_id}/machines", machine) end)
-    # |> Enum.map(fn machine -> patch("machines/#{machine.id}", machine) end)
-    # |> Enum.map(fn machine -> put("machines/#{machine.id}", machine) end)
-    # |> Enum.map(fn body -> Poison.decode(body, as: %Machine{}) end)
-    # |> Enum.map(fn tuple -> elem(tuple, 1) end)
   end
 
   def provision(threaded: true) do
@@ -142,25 +142,11 @@ defmodule ErlMeter do
     machine_count = Application.get_env(:erl_meter, :machines)
 
     organization_structs(org_count)
-    |> Enum.map(fn org -> async_post("organizations", org) end)
-    |> Enum.map(fn task -> Task.yield(task, :infinity) end)
-    |> Enum.map(fn {_, res} -> res || nil end)
-    |> Enum.map(fn body -> Poison.decode(body, as: %Organization{}) end)
-    |> Enum.map(fn response_tuple -> elem(response_tuple, 1) end)
-    |> Enum.map(fn org -> infrastructure_structs(inf_count, org) end)
-    |> List.flatten
-    |> Enum.map(fn inf -> async_post("organizations/#{inf.organization_id}/infrastructures", inf) end)
-    |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
-    |> Enum.map(fn {_, res} -> res || nil end)
-    |> Enum.map(fn body -> Poison.decode(body, as: %Infrastructure{}) end)
-    |> Enum.map(fn tuple -> elem(tuple, 1) end)
-    |> Enum.map(fn inf -> machine_structs(machine_count, inf) end)
-    |> List.flatten
-    |> Enum.map(fn machine -> async_post("infrastructures/#{machine.infrastructure_id}/machines", machine) end)
-    |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
-    |> Enum.map(fn {_, res} -> res || nil end)
-    |> Enum.map(fn body -> Poison.decode(body, as: %Machine{}) end)
-    |> Enum.map(fn tuple -> elem(tuple, 1) end)
+    |> Stream.map(fn org -> post("organizations", org) end)
+    |> Stream.flat_map(fn org -> infrastructure_structs(inf_count, org) end)
+    |> Stream.map(fn inf -> post("organizations/#{inf.organization_id}/infrastructures", inf) end)
+    |> Stream.flat_map(fn inf -> machine_structs(machine_count, inf) end)
+    |> Parallel.map(fn machine -> post("infrastructures/#{machine.infrastructure_id}/machines", machine) end, size: 1000)
   end
 
   def post_samples(machines: machines, threaded: false, destination: :api) do
@@ -180,47 +166,14 @@ defmodule ErlMeter do
     sample_count = Application.get_env(:erl_meter, :samples)
     Stream.cycle(machines)
     |> Stream.take(sample_count)
-    |> Enum.map(fn machine -> async_post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end)
-    |> Enum.map(fn tasks -> Task.yield(tasks, :infinity) end)
+    |> Parallel.map(fn machine -> post("machines/#{machine.id}/samples", sample(machine), "dev_samples" ) end, size: 1000)
   end
-
-  # defp pool_name() do
-  #   :example_pool
-  # end
-
-  # defp pool_post(tuple) do
-  #   IO.puts "pool post"
-  #   :poolboy.transaction(
-  #     pool_name(),
-  #     fn(worker) -> :gen_server.call(worker,tuple) end
-  #   )
-  # end
-
-#iex(1)> :poolboy.transaction(:hello_pool, fn(worker)-> :gen_server.call(worker, :greet) end)
-
 
 
   def init({}) do
-
-    # poolboy_config = [
-    #   name: {:local, pool_name()},
-    #   worker_module: ErlMeter.Worker,
-    #   size: 2,
-    #   max_overflow: 100  ]
-
-    # children = [ :poolboy.child_spec(pool_name(), poolboy_config, []) ]
-
-    # options = [
-    #   strategy: :one_for_one,
-    #   name: ErlMeter.Supervisor ]
-
-    # Supervisor.start_link(children, options)
-
   end
 
   def start(_type, args) do
-    # ErlMeter.Supervisor.start_link
-
     main(args)
   end
 

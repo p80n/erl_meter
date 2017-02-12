@@ -12,14 +12,14 @@ use Mix.Config
 #
 config :erl_meter,
   protocol: "http",
-  host: "localhost",
-  port: "5984",
+  host: "",
+  port: "80",
   organizations: 1,
   infrastructures: 1,  # per organization
-  machines: 1,        # per infrastructure
-  samples: 20000,        # total samples
-  threaded: false,
-  destination: :couch    # api or couch
+  machines: 20,        # per infrastructure
+  samples: 100,
+  threaded: true,
+  destination: :api   # api or couch
 
 #
 # And access this configuration in your application as:
