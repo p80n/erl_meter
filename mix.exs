@@ -9,14 +9,14 @@ defmodule ErlMeter.Mixfile do
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps]
+     deps: deps() ]
   end
 
   # Configuration for the OTP application
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :httpoison, :timex]]
+    [ applications: [:logger, :httpoison, :timex]]
   end
 
   # Dependencies can be Hex packages:
