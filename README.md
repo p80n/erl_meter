@@ -18,3 +18,9 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
           [applications: [:erl_meter]]
         end
 
+
+## Running from docker
+
+```bash
+docker run -e DESTINATION=api -e HOST=10.3.0.214 -e SAMPLES=100 -e MACHINES=10000 p80n/erl-meter
+```
